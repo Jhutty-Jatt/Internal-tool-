@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dino Chase – Real Sprites</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #202124;          /* dark Chrome page */
+      font-family: monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #f5f5f5;
+    }
+
+    .wrapper { text-align: center; }
+
+    .hud-top {
+      display: flex;
+      justify-content: flex-end;
+      width: 800px;
+      margin: 0 auto 4px;
+      font-size: 12px;
+      color: #bfbfbf;
+    }
+
+    .hud-top span { margin-left: 16px; }
+
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      width: 800px;
+      margin: 4px auto 10px;
+      font-size: 13px;
+    }
+    .hud-bottom span.label { font-weight: bold; }
+
+    #game {
+      width: 800px;
+      height: 220px;
+      background: #202124;
+      border: 1px solid #555;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #ground {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 50px;
+      height: 2px;
+      background: #f5f5f5;
+    }
+
+    /* sky extras */
+    .cloud, .star {
+      position: absolute;
+      top: 30px;
+      opacity: 0.25;
+    }
+    .cloud {
+      width: 40px;
+      height: 12px;
+      border-radius: 10px;
+      background: #f5f5f5;
+    }
+    .cloud::before,
+    .cloud::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 10px;
+      border-radius: 10px;
+      background: #f5f5f5;
+      top: -4px;
+    }
+    .cloud::before { left: 2px; }
+    .cloud::after  { right: 2px; }
+
+    .star {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #f5f5f5;
+    }
+
+    /* ====== SPRITES USING REAL IMAGES ====== */
+
+    .sprite {
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      background-size: contain;
+      image-rendering: pixelated; /* gives retro feel */
+    }
+
+    /* runner (human) */
+    #runner {
+      position: absolute;
+      bottom: 50px;
+      left: 150px;
+      width: 50px;
+      height: 60px;
+      background-image: url("human.png");
+      animation: bob 0.25s steps(2) infinite;
+    }
+
+    /* dino */
+    #dino {
+      position: absolute;
+      bottom: 50px;
+      left: 100px; /* behind the human */
+      width: 70px;
+      height: 50px;
+      background-image: url("dino.png");
+      animation: bob 0.25s steps(2) infinite;
+    }
+
+    @keyframes bob {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-2px); }
+      100% { transform: translateY(0); }
+    }
+
+    /* obstacles */
+    .obstacle {
+      position: absolute;
+      bottom: 50px;
+    }
+
+    .bush {
+      width: 45px;
+      height: 40px;
+      background-image: url("bush.png");
+    }
+
+    .tree {
+      width: 60px;
+      height: 90px;
+      background-image: url("tree.png");
+    }
+
+    .animal {
+      width: 40px;
+      height: 30px;
+      background-image: url("animal.png");
+    }
+
+    /* pit: you can use image or just a dark hole */
+    .pit {
+      width: 60px;
+      height: 14px;
+      bottom: 48px;
+      background: #202124;
+      border-top: 2px solid #f5f5f5;
+      /* if you have an image: comment above & uncomment below
+      background-image: url("pit.png");
+      background-color: transparent;
+      */
+    }
+
+    /* overlay */
+    #overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(32, 33, 36, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #f5f5f5;
+      font-size: 14px;
+      display: none;
+    }
+    #overlay.show { display: flex; }
+
+    #message {
+      margin-bottom: 6px;
+      font-size: 16px;
+      letter-spacing: 2px;
+    }
+
+    .hint { font-size: 11px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="hud-top">
+      <span>HI&nbsp;<span id="hiScore">00000</span></span>
+      <span><span id="scoreText">00000</span></span>
+    </div>
+
+    <div class="hud-bottom">
+      <div><span class="label">Score:</span> <span id="score">0</span></div>
+      <div><span class="label">Distance:</span> <span id="distance">0</span> m</div>
+      <div><span class="label">Time:</span> <span id="time">0.0</span> s</div>
+    </div>
+
+    <div id="game">
+      <!-- sky -->
+      <div class="cloud" style="left:120px; top:40px;"></div>
+      <div class="cloud" style="left:420px; top:30px;"></div>
+      <div class="cloud" style="left:650px; top:45px;"></div>
+      <div class="star"  style="left:80px;  top:20px;"></div>
+      <div class="star"  style="left:300px; top:18px;"></div>
+      <div class="star"  style="left:560px; top:24px;"></div>
+
+      <div id="ground"></div>
+
+      <!-- characters -->
+      <div id="dino"   class="sprite"></div>
+      <div id="runner" class="sprite"></div>
+
+      <!-- overlay -->
+      <div id="overlay">
+        <div id="message">PRESS SPACE TO START</div>
+        <div class="hint">
+          Space / ↑ jump • Avoid bush, tree, pit & mini animal • Enter to restart
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const game = document.getElementById("game");
+    const runner = document.getElementById("runner");
+    const scoreEl = document.getElementById("score");
+    const distanceEl = document.getElementById("distance");
+    const timeEl = document.getElementById("time");
+    const hiScoreEl = document.getElementById("hiScore");
+    const scoreText = document.getElementById("scoreText");
+    const overlay = document.getElementById("overlay");
+    const messageEl = document.getElementById("message");
+
+    const GAME_WIDTH = 800;
+    const GROUND_Y = 50;
+    const RUNNER_X = 150;
+    const GRAVITY = 0.5;
+    const JUMP_FORCE = 10;
+
+    let runnerY = 0;
+    let velocityY = 0;
+    let isJumping = false;
+    let isOnGround = true;
+
+    let obstacles = [];
+    let lastSpawnTime = 0;
+    let spawnInterval = 1300;
+    let baseSpeed = 4;
+
+    let isGameRunning = false;
+    let isGameOver = false;
+
+    let lastTimestamp = null;
+    let startTime = null;
+    let elapsedTime = 0;
+    let distance = 0;
+    let score = 0;
+    let hiScore = 0;
+
+    overlay.classList.add("show");
+
+    function resetGameState() {
+      obstacles.forEach(o => game.removeChild(o.el));
+      obstacles = [];
+
+      runnerY = 0;
+      velocityY = 0;
+      isJumping = false;
+      isOnGround = true;
+      runner.style.bottom = GROUND_Y + "px";
+
+      baseSpeed = 4;
+      spawnInterval = 1300;
+
+      score = 0;
+      distance = 0;
+      elapsedTime = 0;
+
+      scoreEl.textContent = "0";
+      distanceEl.textContent = "0";
+      timeEl.textContent = "0.0";
+      scoreText.textContent = "00000";
+
+      lastSpawnTime = 0;
+      lastTimestamp = null;
+      startTime = null;
+
+      isGameOver = false;
+      isGameRunning = false;
+
+      messageEl.textContent = "PRESS SPACE TO START";
+      overlay.classList.add("show");
+    }
+
+    function startGame() {
+      if (isGameRunning) return;
+      isGameRunning = true;
+      overlay.classList.remove("show");
+      requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+      isGameRunning = false;
+      isGameOver = true;
+
+      if (score > hiScore) {
+        hiScore = score;
+        hiScoreEl.textContent = pad(hiScore);
+      }
+
+      messageEl.textContent = "GAME OVER";
+      overlay.classList.add("show");
+    }
+
+    function pad(num) {
+      return num.toString().padStart(5, "0");
+    }
+
+    function randomObstacleType() {
+      const r = Math.random();
+      if (r < 0.35) return "bush";
+      if (r < 0.65) return "tree";
+      if (r < 0.85) return "animal";
+      return "pit";
+    }
+
+    function spawnObstacle() {
+      const type = randomObstacleType();
+      const el = document.createElement("div");
+      el.classList.add("obstacle", "sprite", type);
+      el.style.left = GAME_WIDTH + "px";
+      el.style.bottom = (type === "pit" ? GROUND_Y - 2 : GROUND_Y) + "px";
+      game.appendChild(el);
+
+      let width = 60;
+      if (type === "bush")   width = 45;
+      if (type === "tree")   width = 60;
+      if (type === "animal") width = 40;
+      if (type === "pit")    width = 60;
+
+      obstacles.push({ type, el, x: GAME_WIDTH, width, scored: false });
+    }
+
+    function updateRunner(dt) {
+      if (!isOnGround || isJumping) {
+        velocityY -= GRAVITY;
+        runnerY += velocityY;
+
+        if (runnerY <= 0) {
+          runnerY = 0;
+          velocityY = 0;
+          isOnGround = true;
+          isJumping = false;
+        }
+      }
+      runner.style.bottom = (GROUND_Y + runnerY) + "px";
+    }
+
+    function updateObstacles(dt) {
+      const speed = baseSpeed + elapsedTime * 0.02;
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.x -= speed;
+        o.el.style.left = o.x + "px";
+
+        if (!o.scored && RUNNER_X > o.x + o.width) {
+          o.scored = true;
+          score += 10;
+          scoreEl.textContent = score;
+          scoreText.textContent = pad(score);
+        }
+
+        if (o.x + o.width < -80) {
+          game.removeChild(o.el);
+          obstacles.splice(i, 1);
+        }
+      }
+    }
+
+    function checkCollisions() {
+      const runnerRect = runner.getBoundingClientRect();
+      const gameRect = game.getBoundingClientRect();
+
+      const r = {
+        left:   runnerRect.left   - gameRect.left,
+        right:  runnerRect.right  - gameRect.left,
+        top:    runnerRect.top    - gameRect.top,
+        bottom: runnerRect.bottom - gameRect.top
+      };
+
+      for (const o of obstacles) {
+        const rect = o.el.getBoundingClientRect();
+        const ob = {
+          left:   rect.left   - gameRect.left,
+          right:  rect.right  - gameRect.left,
+          top:    rect.top    - gameRect.top,
+          bottom: rect.bottom - gameRect.top
+        };
+
+        const hit =
+          r.left < ob.right &&
+          r.right > ob.left &&
+          r.top < ob.bottom &&
+          r.bottom > ob.top;
+
+        if (hit) {
+          endGame();
+          return;
+        }
+      }
+    }
+
+    function loop(timestamp) {
+      if (!isGameRunning) return;
+
+      if (!lastTimestamp) {
+        lastTimestamp = timestamp;
+        startTime = timestamp;
+      }
+      const dtMs = timestamp - lastTimestamp;
+      const dt = dtMs / 1000;
+      lastTimestamp = timestamp;
+
+      elapsedTime = (timestamp - startTime) / 1000;
+      timeEl.textContent = elapsedTime.toFixed(1);
+
+      const speedForDistance = baseSpeed + elapsedTime * 0.02;
+      distance += speedForDistance * dt * 5;
+      distanceEl.textContent = Math.floor(distance);
+
+      if (timestamp - lastSpawnTime > spawnInterval) {
+        spawnObstacle();
+        lastSpawnTime = timestamp;
+        if (spawnInterval > 700) spawnInterval -= 20;
+      }
+
+      updateRunner(dt);
+      updateObstacles(dt);
+      checkCollisions();
+
+      if (isGameRunning) requestAnimationFrame(loop);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space" || e.code === "ArrowUp") {
+        e.preventDefault();
+        if (!isGameRunning && !isGameOver) startGame();
+        if (isOnGround && !isGameOver) {
+          isOnGround = false;
+          isJumping = true;
+          velocityY = JUMP_FORCE;
+        }
+      }
+      if (e.code === "Enter" && isGameOver) {
+        resetGameState();
+      }
+    });
+
+    resetGameState();
+  </script>
+</body>
+</html>
+
